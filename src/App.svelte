@@ -1,25 +1,23 @@
 <script lang="ts">
   import { ArrowUpRight, ArrowRight, Zap, Code2, Cpu, CircuitBoard, Network, ShieldCheck, Plus, Minus, Menu, X, Check, Layers } from '@lucide/svelte';
-  import { commissionEmail } from './lib/contact';
-  const arrival = new URL(window.location.href);
-  const returnedFromSubmission = arrival.searchParams.get('commission') === 'received';
-  if (returnedFromSubmission) {
-    arrival.searchParams.delete('commission');
-    window.history.replaceState(window.history.state, '', arrival.href);
-  }
-  const confirmationURL = new URL(import.meta.env.BASE_URL, window.location.origin);
-  confirmationURL.searchParams.set('commission', 'received');
+  import { onDestroy } from 'svelte';
+  import { commissionEmail, web3formsAccessKey } from './lib/contact';
   let menuOpen = false;
   let activeFaq: number | null = null;
-  let modalOpen = returnedFromSubmission;
+  let modalOpen = false;
   let projectType = 'Programming & software';
   let projectDetails = '';
   let projectName = '';
   let clientEmail = '';
   let otherContact = '';
-  let honeypot = '';
+  let honeypot = false;
   let sending = false;
-  let submitted = returnedFromSubmission;
+  let submitted = false;
+  let sendingSlow = false;
+  let deliveryUnconfirmed = false;
+  let slowTimer: ReturnType<typeof setTimeout> | undefined;
+  let requestTimer: ReturnType<typeof setTimeout> | undefined;
+  let requestController: AbortController | undefined;
   let submitError = '';
   const services = [
     { icon: Code2, number: '01', title: 'Programming & software', text: 'Clean code. Real solutions. From your first algorithm to a working application.', tags: ['C / C++', 'Arduino IDE', 'Debugging'], class: 'code' },
@@ -41,7 +39,7 @@
     node.focus();
     function trap(event: KeyboardEvent) {
       if (event.key !== 'Tab') return;
-      const items = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not([type="hidden"]):not([tabindex="-1"]), select, textarea, a[href]'));
+      const items = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled):not([type="hidden"]):not([tabindex="-1"]), select:not(:disabled), textarea:not(:disabled), a[href]')).filter(item => item.getClientRects().length > 0);
       const first = items[0], last = items[items.length - 1];
       if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -49,23 +47,65 @@
     node.addEventListener('keydown', trap);
     return { destroy() { node.removeEventListener('keydown', trap); document.body.style.overflow = oldOverflow; previous?.focus(); } };
   }
-  function sendCommission(event: SubmitEvent) {
-    if (sending || submitted) { event.preventDefault(); return; }
+  function clearRequestTimers() {
+    clearTimeout(slowTimer);
+    clearTimeout(requestTimer);
+  }
+  onDestroy(() => {
+    clearRequestTimers();
+    requestController?.abort();
+  });
+  async function sendCommission(event: SubmitEvent) {
+    event.preventDefault();
+    if (sending || submitted || deliveryUnconfirmed) return;
     submitError = '';
-    if (!commissionEmail) {
-      event.preventDefault();
-      submitError = 'Email submissions are temporarily unavailable. Please try again later.';
+    if (!web3formsAccessKey) {
+      submitError = 'Online requests are not enabled yet. Please email the team directly.';
       return;
     }
     if (honeypot) {
-      event.preventDefault();
       submitError = 'Please leave the website field empty and try again.';
       return;
     }
-    // Let the browser POST normally. The provider handles confirmation and
-    // redirects back only after processing; a lost AJAX reply cannot report failure.
-    // Keep named inputs enabled so the browser includes all contact details.
     sending = true;
+    sendingSlow = false;
+    requestController = new AbortController();
+    slowTimer = setTimeout(() => sendingSlow = true, 8000);
+    requestTimer = setTimeout(() => requestController?.abort(), 30000);
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        signal: requestController.signal,
+        body: JSON.stringify({
+          access_key: web3formsAccessKey,
+          name: projectName.trim(),
+          email: clientEmail.trim(),
+          from_name: 'Engineers on Queue',
+          subject: 'New commission request — Engineers on Queue',
+          service: projectType,
+          other_contact: otherContact.trim() || 'Not provided',
+          message: projectDetails.trim(),
+          botcheck: honeypot
+        })
+      });
+      const result = await response.json();
+      if (response.ok && result?.success === true) {
+        submitted = true;
+      } else if (result?.success === false && response.status < 500) {
+        submitError = 'Your request was not accepted. Check your details and try again, or email the team directly.';
+      } else {
+        deliveryUnconfirmed = true;
+      }
+    } catch {
+      // A lost reply or timeout does not prove the email failed to send.
+      deliveryUnconfirmed = true;
+    } finally {
+      clearRequestTimers();
+      requestController = undefined;
+      sending = false;
+      sendingSlow = false;
+    }
   }
   function newCommission() {
     submitted = false;
@@ -74,7 +114,8 @@
     clientEmail = '';
     otherContact = '';
     projectDetails = '';
-    honeypot = '';
+    honeypot = false;
+    deliveryUnconfirmed = false;
   }
 </script>
 
@@ -137,18 +178,18 @@
         <button class="button primary" onclick={newCommission}>Send another request <ArrowRight size={17}/></button>
       {:else}
         <p>Leave your contact details and tell us what you need. Your request will be emailed to our team so we can get back to you.</p>
-        <form action={'https://formsubmit.co/' + encodeURIComponent(commissionEmail)} method="POST" onsubmit={sendCommission} aria-busy={sending}>
-          <input type="hidden" name="_subject" value="New commission request — Engineers on Queue"/>
-          <input type="hidden" name="_template" value="table"/>
-          <input type="hidden" name="_next" value={confirmationURL.href}/>
-          <fieldset>
+        {#if !web3formsAccessKey}<div class="submission-notice" role="status"><strong>Online requests are not enabled yet.</strong><p>You can still send your project details directly to <a href={'mailto:' + commissionEmail}>{commissionEmail}</a>.</p></div>{/if}
+        {#if sending}<div class="submission-pending" role="status" aria-live="polite"><span class="sending-spinner" aria-hidden="true"></span><p>{sendingSlow ? 'Still waiting for confirmation. Please keep this tab open and don’t submit again.' : 'Sending your request… Please keep this tab open.'}</p></div>{/if}
+        {#if deliveryUnconfirmed}<div class="submission-notice" role="status"><strong>Delivery not confirmed</strong><p>Your request may already have arrived. To avoid duplicates, please check with our team before sending it again.</p><a href={'mailto:' + commissionEmail}>Contact {commissionEmail} <ArrowUpRight size={14}/></a></div>{/if}
+        <form onsubmit={sendCommission} aria-busy={sending}>
+          <fieldset disabled={sending}>
             <label>Your name<input name="name" bind:value={projectName} required placeholder="How should we call you?" maxlength="100" autocomplete="name"/></label>
             <label>Your email<input name="email" type="email" bind:value={clientEmail} required maxlength="254" placeholder="you@example.com" autocomplete="email" aria-describedby="client-email-help"/></label><p id="client-email-help" class="field-hint">We’ll use this address to reply about your project.</p><label>Other contact (optional)<input name="other_contact" bind:value={otherContact} maxlength="200" placeholder="Phone number, Messenger link, or Discord username"/></label>
             <label>What do you need?<select name="service" bind:value={projectType}>{#each services as service}<option>{service.title}</option>{/each}<option>Something else</option></select></label>
             <label>Tell us about your project<textarea name="message" bind:value={projectDetails} required minlength="20" maxlength="5000" rows="5" placeholder="Your idea, requirements, timeline, and budget if you have one…"></textarea></label>
-            <div class="form-honeypot" aria-hidden="true"><label>Leave this field empty<input name="_honey" bind:value={honeypot} tabindex="-1" autocomplete="off"/></label></div>
-            <p class="form-disclosure">By sending, you agree to share these details with Engineers on Queue through <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit</a> to handle your inquiry.</p>
-            <button class="button primary submit-button" type="submit" disabled={sending}>{sending ? 'Opening secure submission…' : 'Send commission request'} <ArrowRight size={17}/></button>
+            <div class="form-honeypot" aria-hidden="true"><label>Leave this field empty<input type="checkbox" name="botcheck" bind:checked={honeypot} tabindex="-1" autocomplete="off"/></label></div>
+            <p class="form-disclosure">By sending, you agree to share these details with Engineers on Queue through <a href="https://web3forms.com/privacy" target="_blank" rel="noopener noreferrer">Web3Forms</a> to handle your inquiry.</p>
+            <button class="button primary submit-button" type="submit" disabled={sending || deliveryUnconfirmed || !web3formsAccessKey}>{sending ? 'Sending request…' : 'Send commission request'} <ArrowRight size={17}/></button>
           </fieldset>
           {#if submitError}<div class="submission-error" role="alert"><p>{submitError}</p><a href={'mailto:' + commissionEmail}>Email {commissionEmail} <ArrowUpRight size={14}/></a></div>{/if}
         </form>
@@ -156,4 +197,4 @@
     </div>
   </div>
 {/if}
-<svelte:window onpageshow={() => sending = false} onkeydown={(e) => { if (e.key === 'Escape') { modalOpen = false; menuOpen = false; } }}/>
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') { modalOpen = false; menuOpen = false; } }}/>

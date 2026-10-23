@@ -34,7 +34,7 @@ Production builds include a `version.json` manifest. Open tabs check for a new d
 
 ## Before launch
 
-- Activate FormSubmit for `engineersonqueue@protonmail.com` as described below before relying on email inquiries.
+- Configure the free Web3Forms public form access key for `engineersonqueue@protonmail.com` as described below before relying on email inquiries.
 - Confirm the member's specific ISC2 certification and add a public verification link if desired. The current copy claims only the membership credential supplied by the team, with no invented certification level or endorsement.
 - Replace the honest portfolio placeholder with real projects when available; obtain permission before publishing client work.
 - Google Fonts are optional external requests; system sans-serif fallbacks keep the site usable if fonts cannot load.
@@ -43,20 +43,19 @@ The hero artwork is CSS and SVG; no external image assets are required. Brand co
 
 ## Commission request email
 
-The form sends requests to **engineersonqueue@protonmail.com** using a standard browser POST to FormSubmit. This works with GitHub Pages and does not require an SMTP password or a private API key in the browser. The receiving address is public in `src/lib/contact.ts`; change it there to switch inboxes.
+The form uses Web3Forms to send commission requests to the inbox associated with a public form access key. The team's receiving inbox is **engineersonqueue@protonmail.com**. A static GitHub Pages or Cloudflare Pages site can use this without an SMTP password or a backend server.
 
-Each request includes the client's name, required reply email, optional phone number or social contact, selected service, and project details. The client email uses FormSubmit's `email` field so the team can reply. FormSubmit handles any provider verification and redirects back to the website's confirmation dialog after processing. The absolute `_next` return URL uses the current domain and deployment base, so it works on both GitHub Pages and Cloudflare Pages.
+### One-time free setup
 
-The site uses the browser's native form submission instead of AJAX: it does not abort delivery after 20 seconds or try to parse a cross-origin JSON response. This prevents the previous client-side error path after the service had already sent the email. Named inputs remain enabled during submission so contact information is included; only the send button is disabled to discourage duplicate clicks. Returning with the browser's Back button resets the pending state. A hidden honeypot field helps filter automated submissions. The UI explains that FormSubmit processes inquiry data.
+1. Create a free form access key at `https://web3forms.com` using `engineersonqueue@protonmail.com` and follow the verification email.
+2. The confirmed public form key supplied by the team is configured in `src/lib/contact.ts`. To change it later, replace that public default or set `VITE_WEB3FORMS_ACCESS_KEY` in the build environment. An explicitly empty value disables online submissions; leaving the variable unset uses the confirmed default. This is a browser form access key, designed to be visible in the shipped JavaScript; it is not an account password or private administration API token.
+3. Rebuild and deploy, then submit one clearly labeled setup request from the live domain and verify that it arrives with the correct reply email. Sending email to a destination depends on the access key's inbox binding; changing only `commissionEmail` does not reroute submissions.
 
-### One-time receiving inbox activation
+Customers submit their name, required reply email, optional phone or social contact, service, and project details without leaving the site. The interface shows success only after an explicit successful response from Web3Forms. A rejected request preserves the contact fields for correction. A lost or timed-out response is treated as unconfirmed delivery, since the email may already have been accepted; the site does not automatically resend or claim that delivery failed.
 
-1. Wait for the GitHub Pages deployment to complete.
-2. Submit one clearly labeled setup request through the live site.
-3. Open **engineersonqueue@protonmail.com**, check inbox and spam, and click the FormSubmit activation link. Only someone with access to this inbox can complete this step.
-4. Submit a new request after activation and verify that it arrives and that Reply addresses the client email. Do not assume the pre-activation setup request will be forwarded.
+Web3Forms must be configured before email submissions can work. The missing-key state offers a direct email link. The site uses Web3Forms only and does not redirect customers away to submit a request. Free-plan limits and provider delivery speed still apply; neither submission confirmation nor tests prove instant inbox delivery.
 
-Local browser tests intercept the provider POST and verify the contact payload and confirmation redirect without sending email. The owner has reported receiving live commission emails; local tests do not independently verify inbox delivery. Check FormSubmit's current service limits and availability if delivery stops. No email credentials should be committed to this repository.
+Local browser checks intercept the provider request and exercise success, rejection, missing setup, and uncertain delivery without sending real emails. Keep the provider's public browser form access key separate from account passwords and private management credentials.
 
 ## Publish free on Cloudflare Pages
 
@@ -78,6 +77,6 @@ Cloudflare Pages hosts this static site on the Free plan with a `pages.dev` addr
    Leave `VITE_BASE_PATH` unset, or set it to `/`. No deploy command, Wrangler configuration, SMTP credentials, or paid plan is required for this Pages project.
 5. Click **Save and Deploy**. Wait for a successful deployment, then use the exact `https://<project-name>.pages.dev` address Cloudflare provides. The suggested name is not guaranteed to be available.
 
-Later pushes to `main` deploy automatically on Cloudflare when the Git connection is enabled. Connecting a custom `.com` domain is optional and domain registration is a separate expense. After moving hosts, verify the commission form on the new domain and follow any FormSubmit activation prompt before relying on delivery there.
+Later pushes to `main` deploy automatically on Cloudflare when the Git connection is enabled. Connecting a custom `.com` domain is optional and domain registration is a separate expense. After moving hosts, verify the commission form on the new domain and verify the Web3Forms key is configured before relying on delivery there.
 
 To build manually for a root-domain host, run `npm run build`. To reproduce the GitHub Pages subpath build locally, run `VITE_BASE_PATH=/engineersonqueue/ npm run build`.
