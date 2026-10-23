@@ -1,6 +1,6 @@
 # engineersonqueue website
 
-Responsive commission-group website built with Svelte 5, TypeScript, Vite, and Lucide icons. Features service descriptions, an honest pre-launch portfolio, a credential section, FAQs, mobile navigation, and an email commission form with a downloadable brief fallback when email delivery is not configured.
+Responsive commission-group website built with Svelte 5, TypeScript, Vite, and Lucide icons. Features service descriptions, an honest pre-launch portfolio, a credential section, FAQs, mobile navigation, and a direct email commission form with client contact details.
 
 ## Development
 
@@ -30,6 +30,8 @@ The Vite base path is `/engineersonqueue/` so assets load correctly on this proj
 
 Creating a build or pushing the workflow does not establish that the site is live; check the Actions deployment result.
 
+Production builds include a `version.json` manifest. Open tabs check for a new deployment on startup, when returning to the tab, and every minute. A newer release triggers a refresh with a version query parameter, preserving the current section and other query parameters. Refresh waits while a commission dialog is open or a form is being edited. If an old deployment predates this feature, open the site once with a fresh `?v=` value or force-refresh to load the update.
+
 ## Before launch
 
 - Activate FormSubmit for `engineersonqueue@protonmail.com` as described below before relying on email inquiries.
@@ -41,7 +43,7 @@ The hero artwork is CSS and SVG; no external image assets are required. Brand co
 
 ## Commission request email
 
-The form sends requests to **engineersonqueue@protonmail.com** using FormSubmit's AJAX endpoint. This works with GitHub Pages and does not require an SMTP password or a private API key in the browser. The receiving address is public in `src/lib/contact.ts`; change it there to switch inboxes. If no address is set, the original local brief generator remains available.
+The form sends requests to **engineersonqueue@protonmail.com** using FormSubmit's AJAX endpoint. This works with GitHub Pages and does not require an SMTP password or a private API key in the browser. The receiving address is public in `src/lib/contact.ts`; change it there to switch inboxes.
 
 Each request includes the client's name, required reply email, optional phone number or social contact, selected service, and project details. The client email uses FormSubmit's `email` field so the team can reply. The UI shows a submission confirmation only after FormSubmit returns a successful response; this confirms acceptance by the service, not inbox delivery. Network failures, timeouts, and provider rejection preserve the form and offer retry or a direct email link. A hidden honeypot field helps filter automated submissions. The UI explains that FormSubmit processes inquiry data.
 

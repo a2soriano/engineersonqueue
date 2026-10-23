@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { ArrowUpRight, ArrowRight, Zap, Code2, Cpu, CircuitBoard, Network, ShieldCheck, Plus, Minus, Menu, X, Check, Copy, Layers } from '@lucide/svelte';
+  import { ArrowUpRight, ArrowRight, Zap, Code2, Cpu, CircuitBoard, Network, ShieldCheck, Plus, Minus, Menu, X, Check, Layers } from '@lucide/svelte';
   import { commissionEmail } from './lib/contact';
   let menuOpen = false;
   let activeFaq: number | null = null;
   let modalOpen = false;
-  let copied = false;
   let projectType = 'Programming & software';
   let projectDetails = '';
   let projectName = '';
@@ -14,7 +13,6 @@
   let sending = false;
   let submitted = false;
   let submitError = '';
-  let brief = '';
   const services = [
     { icon: Code2, number: '01', title: 'Programming & software', text: 'Clean code. Real solutions. From your first algorithm to a working application.', tags: ['C / C++', 'Arduino IDE', 'Debugging'], class: 'code' },
     { icon: Cpu, number: '02', title: 'Embedded & automation', text: 'Make the physical world respond. Smart systems built around your idea.', tags: ['Microcontrollers', 'Sensors', 'Motor control'], class: 'embedded' },
@@ -25,8 +23,8 @@
     ['What kind of projects do you accept?', 'We take on programming, Arduino, electronics, circuit design, basic embedded systems, automation, networking simulations, and cybersecurity training. We review the scope and complexity together before committing.'],
     ['How much does a commission cost?', 'Every project is different. Share your requirements, budget, and deadline, and we’ll scope the work and agree on a quote before starting.'],
     ['Can you help with an existing project?', 'Yes. We can help debug code, troubleshoot hardware, integrate components, or work through a specific issue in an existing project.'],
-    ['How do we work together?', 'Start with a project brief. We’ll discuss feasibility, agree on scope, pricing, and milestones, then build and test the solution with updates along the way.'],
-    ['Do you offer training or project walkthroughs?', 'Yes. Ask about guided explanations, programming support, Packet Tracer exercises, and cybersecurity training when you submit your brief.']
+    ['How do we work together?', 'Send your contact details and project requirements. We’ll discuss feasibility, agree on scope, pricing, and milestones, then build and test the solution with updates along the way.'],
+    ['Do you offer training or project walkthroughs?', 'Yes. Ask about guided explanations, programming support, Packet Tracer exercises, and cybersecurity training when you send your request.']
   ];
   function modalFocus(node: HTMLDivElement) {
     const previous = document.activeElement as HTMLElement | null;
@@ -43,11 +41,10 @@
     node.addEventListener('keydown', trap);
     return { destroy() { node.removeEventListener('keydown', trap); document.body.style.overflow = oldOverflow; previous?.focus(); } };
   }
-  function makeBrief() { brief = `PROJECT INQUIRY — ENGINEERS ON QUEUE\n\nName: ${projectName}\nService: ${projectType}\n\n${projectDetails}`; }
   async function sendCommission() {
     if (sending || submitted) return;
     submitError = '';
-    if (!commissionEmail) { makeBrief(); return; }
+    if (!commissionEmail) { submitError = 'Email submissions are temporarily unavailable. Please try again later.'; return; }
     if (honeypot) { submitError = 'Please leave the website field empty and try again.'; return; }
     sending = true;
     const controller = new AbortController();
@@ -86,10 +83,7 @@
     otherContact = '';
     projectDetails = '';
     honeypot = '';
-    brief = '';
-    copied = false;
   }
-  async function copyBrief() { try { await navigator.clipboard.writeText(brief); copied = true; } catch { copied = false; } }
 </script>
 
 <svelte:head><meta property="og:title" content="Engineers on Queue — Your ideas. Engineered."/><meta property="og:description" content="A hands-on engineering collective for code, circuits, embedded systems, and beyond. Open for commissions."/></svelte:head>
@@ -141,32 +135,28 @@
 
 {#if modalOpen}
   <div class="modal-backdrop" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) modalOpen = false; }}>
-    <div use:modalFocus class="modal" role="dialog" aria-modal="true" aria-labelledby="brief-title" tabindex="-1">
-      <button class="modal-close" aria-label="Close project brief" onclick={() => modalOpen = false}><X/></button>
+    <div use:modalFocus class="modal" role="dialog" aria-modal="true" aria-labelledby="commission-title" tabindex="-1">
+      <button class="modal-close" aria-label="Close commission request" onclick={() => modalOpen = false}><X/></button>
       <div class="eyebrow"><span></span> LET’S BUILD SOMETHING</div>
-      <h2 id="brief-title">{submitted ? 'Your idea is in the queue.' : 'Start with your idea.'}</h2>
+      <h2 id="commission-title">{submitted ? 'Your idea is in the queue.' : 'Send a commission request.'}</h2>
       {#if submitted}
         <div class="submission-success" role="status"><Check size={23}/><p>Your request was submitted. We’ll review your project and reply to the email address you provided.</p></div>
         <p>Sending a request doesn’t confirm a booking. We’ll discuss the scope, timeline, and quote with you first.</p>
         <button class="button primary" onclick={newCommission}>Send another request <ArrowRight size={17}/></button>
-      {:else if !brief}
-        <p>{commissionEmail ? 'Tell us what you have in mind. Send your request to our team and we’ll get back to you by email.' : 'Create a brief to share with the team. Direct online inquiries will be available when our contact channel launches.'}</p>
+      {:else}
+        <p>Leave your contact details and tell us what you need. Your request will be emailed to our team so we can get back to you.</p>
         <form onsubmit={(e) => { e.preventDefault(); void sendCommission(); }} aria-busy={sending}>
           <fieldset disabled={sending}>
             <label>Your name<input name="name" bind:value={projectName} required placeholder="How should we call you?" maxlength="100" autocomplete="name"/></label>
-            {#if commissionEmail}<label>Your email<input name="email" type="email" bind:value={clientEmail} required maxlength="254" placeholder="you@example.com" autocomplete="email" aria-describedby="client-email-help"/></label><p id="client-email-help" class="field-hint">We’ll use this address to reply about your project.</p><label>Other contact (optional)<input name="other_contact" bind:value={otherContact} maxlength="200" placeholder="Phone number, Messenger link, or Discord username"/></label>{/if}
+            <label>Your email<input name="email" type="email" bind:value={clientEmail} required maxlength="254" placeholder="you@example.com" autocomplete="email" aria-describedby="client-email-help"/></label><p id="client-email-help" class="field-hint">We’ll use this address to reply about your project.</p><label>Other contact (optional)<input name="other_contact" bind:value={otherContact} maxlength="200" placeholder="Phone number, Messenger link, or Discord username"/></label>
             <label>What do you need?<select name="service" bind:value={projectType}>{#each services as service}<option>{service.title}</option>{/each}<option>Something else</option></select></label>
             <label>Tell us about your project<textarea name="message" bind:value={projectDetails} required minlength="20" maxlength="5000" rows="5" placeholder="Your idea, requirements, timeline, and budget if you have one…"></textarea></label>
             <div class="form-honeypot" aria-hidden="true"><label>Leave this field empty<input name="_honey" bind:value={honeypot} tabindex="-1" autocomplete="off"/></label></div>
-            {#if commissionEmail}<p class="form-disclosure">By sending, you agree to share these details with Engineers on Queue through <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit</a> to handle your inquiry.</p>{/if}
-            <button class="button primary submit-button" type="submit">{sending ? 'Sending request…' : commissionEmail ? 'Send commission request' : 'Create project brief'} <ArrowRight size={17}/></button>
+            <p class="form-disclosure">By sending, you agree to share these details with Engineers on Queue through <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit</a> to handle your inquiry.</p>
+            <button class="button primary submit-button" type="submit">{sending ? 'Sending request…' : 'Send commission request'} <ArrowRight size={17}/></button>
           </fieldset>
           {#if submitError}<div class="submission-error" role="alert"><p>{submitError}</p><a href={'mailto:' + commissionEmail}>Email {commissionEmail} <ArrowUpRight size={14}/></a></div>{/if}
         </form>
-      {:else}
-        <p>Your brief is ready. Download it or copy it to share with Engineers on Queue. This brief has not been sent.</p><pre>{brief}</pre>
-        <div class="brief-actions"><button class="button primary" onclick={copyBrief}>{#if copied}<Check size={16}/> Copied{:else}<Copy size={16}/> Copy brief{/if}</button><a class="button secondary" href={'data:text/plain;charset=utf-8,' + encodeURIComponent(brief)} download="engineers-on-queue-brief.txt">Download .txt <ArrowRight size={16}/></a></div>
-        <button class="text-link" onclick={() => { brief = ''; copied = false; }}>Edit brief</button>
       {/if}
     </div>
   </div>
