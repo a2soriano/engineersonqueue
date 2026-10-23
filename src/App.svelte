@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ArrowUpRight, ArrowRight, Zap, Code2, Cpu, CircuitBoard, Network, ShieldCheck, Plus, Minus, Menu, X, Check, Copy, Layers } from '@lucide/svelte';
+  import { commissionEmail } from './lib/contact';
   let menuOpen = false;
   let activeFaq: number | null = null;
   let modalOpen = false;
@@ -7,6 +8,12 @@
   let projectType = 'Programming & software';
   let projectDetails = '';
   let projectName = '';
+  let clientEmail = '';
+  let otherContact = '';
+  let honeypot = '';
+  let sending = false;
+  let submitted = false;
+  let submitError = '';
   let brief = '';
   const services = [
     { icon: Code2, number: '01', title: 'Programming & software', text: 'Clean code. Real solutions. From your first algorithm to a working application.', tags: ['C / C++', 'Arduino IDE', 'Debugging'], class: 'code' },
@@ -28,7 +35,7 @@
     node.focus();
     function trap(event: KeyboardEvent) {
       if (event.key !== 'Tab') return;
-      const items = Array.from(node.querySelectorAll<HTMLElement>('button, input, select, textarea, a[href]'));
+      const items = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not([tabindex="-1"]), select, textarea, a[href]'));
       const first = items[0], last = items[items.length - 1];
       if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -37,6 +44,51 @@
     return { destroy() { node.removeEventListener('keydown', trap); document.body.style.overflow = oldOverflow; previous?.focus(); } };
   }
   function makeBrief() { brief = `PROJECT INQUIRY — ENGINEERS ON QUEUE\n\nName: ${projectName}\nService: ${projectType}\n\n${projectDetails}`; }
+  async function sendCommission() {
+    if (sending || submitted) return;
+    submitError = '';
+    if (!commissionEmail) { makeBrief(); return; }
+    if (honeypot) { submitError = 'Please leave the website field empty and try again.'; return; }
+    sending = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(commissionEmail)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          name: projectName.trim(),
+          email: clientEmail.trim(),
+          other_contact: otherContact.trim() || 'Not provided',
+          service: projectType,
+          message: projectDetails.trim(),
+          _subject: 'New commission request — Engineers on Queue',
+          _template: 'table',
+          _honey: honeypot
+        })
+      });
+      const result = await response.json();
+      if (!response.ok || (result.success !== true && result.success !== 'true')) throw new Error('Submission rejected');
+      submitted = true;
+    } catch {
+      submitError = 'We couldn’t confirm your submission. Your details are still here. Try again, or email the team directly.';
+    } finally {
+      clearTimeout(timeout);
+      sending = false;
+    }
+  }
+  function newCommission() {
+    submitted = false;
+    submitError = '';
+    projectName = '';
+    clientEmail = '';
+    otherContact = '';
+    projectDetails = '';
+    honeypot = '';
+    brief = '';
+    copied = false;
+  }
   async function copyBrief() { try { await navigator.clipboard.writeText(brief); copied = true; } catch { copied = false; } }
 </script>
 
@@ -87,5 +139,36 @@
 </main>
 <footer><div class="footer-top"><a href="#top" class="brand"><span class="brand-icon"><Zap size={23} fill="currentColor"/></span><span>engineers<span class="brand-bottom">on queue<span class="brand-dot">.</span></span></span></a><p>Curiosity in. Possibilities out.</p><a href="#services">Capabilities <ArrowUpRight size={13}/></a><a href="#projects">Our work <ArrowUpRight size={13}/></a><button onclick={() => modalOpen = true}>Get in touch <ArrowUpRight size={13}/></button></div><div class="footer-bottom"><span>© {new Date().getFullYear()} Engineers on Queue. All rights reserved.</span><span>Made with intention. Built for possibility. <span class="green">✦</span></span></div></footer>
 
-{#if modalOpen}<div class="modal-backdrop" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) modalOpen = false; }}><div use:modalFocus class="modal" role="dialog" aria-modal="true" aria-labelledby="brief-title" tabindex="-1"><button class="modal-close" aria-label="Close project brief" onclick={() => modalOpen = false}><X/></button><div class="eyebrow"><span></span> LET’S BUILD SOMETHING</div><h2 id="brief-title">Start with your idea.</h2>{#if !brief}<p>Create a brief to share with the team. Direct online inquiries will be available when our contact channel launches.</p><form onsubmit={(e) => { e.preventDefault(); makeBrief(); }}><label>Your name<input bind:value={projectName} required placeholder="How should we call you?" maxlength="100"/></label><label>What do you need?<select bind:value={projectType}>{#each services as service}<option>{service.title}</option>{/each}<option>Something else</option></select></label><label>Tell us about your project<textarea bind:value={projectDetails} required minlength="20" maxlength="5000" rows="5" placeholder="Your idea, requirements, timeline, and budget if you have one…"></textarea></label><button class="button primary" type="submit">Create project brief <ArrowRight size={17}/></button></form>{:else}<p>Your brief is ready. Download it or copy it to share with Engineers on Queue. This brief has not been sent.</p><pre>{brief}</pre><div class="brief-actions"><button class="button primary" onclick={copyBrief}>{#if copied}<Check size={16}/> Copied{:else}<Copy size={16}/> Copy brief{/if}</button><a class="button secondary" href={'data:text/plain;charset=utf-8,' + encodeURIComponent(brief)} download="engineers-on-queue-brief.txt">Download .txt <ArrowRight size={16}/></a></div><button class="text-link" onclick={() => { brief = ''; copied = false; }}>Edit brief</button>{/if}</div></div>{/if}
+{#if modalOpen}
+  <div class="modal-backdrop" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) modalOpen = false; }}>
+    <div use:modalFocus class="modal" role="dialog" aria-modal="true" aria-labelledby="brief-title" tabindex="-1">
+      <button class="modal-close" aria-label="Close project brief" onclick={() => modalOpen = false}><X/></button>
+      <div class="eyebrow"><span></span> LET’S BUILD SOMETHING</div>
+      <h2 id="brief-title">{submitted ? 'Your idea is in the queue.' : 'Start with your idea.'}</h2>
+      {#if submitted}
+        <div class="submission-success" role="status"><Check size={23}/><p>Your request was submitted. We’ll review your project and reply to the email address you provided.</p></div>
+        <p>Sending a request doesn’t confirm a booking. We’ll discuss the scope, timeline, and quote with you first.</p>
+        <button class="button primary" onclick={newCommission}>Send another request <ArrowRight size={17}/></button>
+      {:else if !brief}
+        <p>{commissionEmail ? 'Tell us what you have in mind. Send your request to our team and we’ll get back to you by email.' : 'Create a brief to share with the team. Direct online inquiries will be available when our contact channel launches.'}</p>
+        <form onsubmit={(e) => { e.preventDefault(); void sendCommission(); }} aria-busy={sending}>
+          <fieldset disabled={sending}>
+            <label>Your name<input name="name" bind:value={projectName} required placeholder="How should we call you?" maxlength="100" autocomplete="name"/></label>
+            {#if commissionEmail}<label>Your email<input name="email" type="email" bind:value={clientEmail} required maxlength="254" placeholder="you@example.com" autocomplete="email" aria-describedby="client-email-help"/></label><p id="client-email-help" class="field-hint">We’ll use this address to reply about your project.</p><label>Other contact (optional)<input name="other_contact" bind:value={otherContact} maxlength="200" placeholder="Phone number, Messenger link, or Discord username"/></label>{/if}
+            <label>What do you need?<select name="service" bind:value={projectType}>{#each services as service}<option>{service.title}</option>{/each}<option>Something else</option></select></label>
+            <label>Tell us about your project<textarea name="message" bind:value={projectDetails} required minlength="20" maxlength="5000" rows="5" placeholder="Your idea, requirements, timeline, and budget if you have one…"></textarea></label>
+            <div class="form-honeypot" aria-hidden="true"><label>Leave this field empty<input name="_honey" bind:value={honeypot} tabindex="-1" autocomplete="off"/></label></div>
+            {#if commissionEmail}<p class="form-disclosure">By sending, you agree to share these details with Engineers on Queue through <a href="https://formsubmit.co/privacy.pdf" target="_blank" rel="noopener noreferrer">FormSubmit</a> to handle your inquiry.</p>{/if}
+            <button class="button primary submit-button" type="submit">{sending ? 'Sending request…' : commissionEmail ? 'Send commission request' : 'Create project brief'} <ArrowRight size={17}/></button>
+          </fieldset>
+          {#if submitError}<div class="submission-error" role="alert"><p>{submitError}</p><a href={'mailto:' + commissionEmail}>Email {commissionEmail} <ArrowUpRight size={14}/></a></div>{/if}
+        </form>
+      {:else}
+        <p>Your brief is ready. Download it or copy it to share with Engineers on Queue. This brief has not been sent.</p><pre>{brief}</pre>
+        <div class="brief-actions"><button class="button primary" onclick={copyBrief}>{#if copied}<Check size={16}/> Copied{:else}<Copy size={16}/> Copy brief{/if}</button><a class="button secondary" href={'data:text/plain;charset=utf-8,' + encodeURIComponent(brief)} download="engineers-on-queue-brief.txt">Download .txt <ArrowRight size={16}/></a></div>
+        <button class="text-link" onclick={() => { brief = ''; copied = false; }}>Edit brief</button>
+      {/if}
+    </div>
+  </div>
+{/if}
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape') { modalOpen = false; menuOpen = false; } }}/>
