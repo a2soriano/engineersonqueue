@@ -1,6 +1,6 @@
 # engineersonqueue website
 
-Responsive commission-group website built with Svelte 5, TypeScript, Vite, and Lucide icons. Features service descriptions, an honest pre-launch portfolio, an ISC2 credential section, FAQs, mobile navigation, and an email commission form with a downloadable brief fallback when email delivery is not configured.
+Responsive commission-group website built with Svelte 5, TypeScript, Vite, and Lucide icons. Features service descriptions, an honest pre-launch portfolio, a credential section, FAQs, mobile navigation, and an email commission form with a downloadable brief fallback when email delivery is not configured.
 
 ## Development
 
