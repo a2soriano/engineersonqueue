@@ -1,82 +1,156 @@
-# engineersonqueue website
+# Engineers on Queue
 
-Responsive commission-group website built with Svelte 5, TypeScript, Vite, and Lucide icons. Features service descriptions, an honest pre-launch portfolio, a credential section, FAQs, mobile navigation, and a direct email commission form with client contact details.
+A responsive website for **Engineers on Queue**, a student-led technical services group focused on software development, electronics, embedded systems, and networking.
 
-## Development
+The site presents the team's services, qualifications, project portfolio, and commission inquiry process in a lightweight, mobile-friendly interface.
 
-Requires Node.js 22+ (validated with Node 24) and npm.
+## Tech stack
 
-```sh
-npm ci --cache /workspace/.npm-cache
-npm run dev -- --port 5173
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| UI framework | Svelte 5 | Component-based interface and interactions |
+| Language | TypeScript | Typed application code |
+| Tooling | Vite | Local development and production builds |
+| Icons | Lucide | Consistent interface iconography |
+| Styling | CSS | Responsive layouts, visual design, and animations |
+| Form delivery | Web3Forms | Commission requests from the static site |
+| Hosting | Cloudflare Pages or GitHub Pages | Static deployment |
+
+No application server or database is required for the current implementation.
+
+## Getting started
+
+**Requirements:** Node.js 22 or later, npm, and Git. Node.js 24 is the validated development version.
+
+Clone the repository, install the locked dependencies, and start the development server:
+
+```bash
+git clone <repository-url>
+cd engineersonqueue
+npm ci
+npm run dev
 ```
 
-```sh
+Vite prints the local address in the terminal, typically `http://localhost:5173`.
+
+### Available commands
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the development server with hot reload |
+| `npm run check` | Run the project's Svelte and TypeScript checks |
+| `npm run build` | Generate an optimized production build in `dist/` |
+| `npm run preview` | Serve the production build locally for verification |
+
+Run the checks and build before submitting changes:
+
+```bash
 npm run check
 npm run build
-npm run preview -- --port 4173
+npm run preview
 ```
 
-## Publish on GitHub Pages
+## Codebase guide
 
-The workflow in `.github/workflows/deploy.yml` checks and builds the site, then deploys it on every push to `main`.
+| Path | Responsibility |
+| --- | --- |
+| `src/App.svelte` | Main page content, service information, and site interactions |
+| `src/style.css` | Global styling and responsive layouts |
+| `src/lib/contact.ts` | Contact settings and Web3Forms access-key configuration |
+| `.github/workflows/deploy.yml` | GitHub Pages build and deployment workflow |
+| `dist/` | Generated production files, created during builds |
 
-1. Push these files to `a2soriano/engineersonqueue`.
-2. Open the repository's **Settings → Pages** and choose **GitHub Actions** as the build source.
-3. Open **Actions → Deploy website to GitHub Pages** and run the workflow if it has not already started.
-4. After a successful deployment, visit `https://a2soriano.github.io/engineersonqueue/`.
+The main content and service definitions currently live in `src/App.svelte`. Visual changes should generally be made in `src/style.css`; contact delivery settings should be managed through `src/lib/contact.ts` or the deployment environment.
 
-The default Vite base path is `/` for Cloudflare Pages and other root-level hosts. The GitHub Actions workflow sets `VITE_BASE_PATH=/engineersonqueue/` explicitly for this GitHub project site. For a custom domain attached to GitHub Pages, change that workflow value to `/`. No backend, database, or deployment secrets are needed. GitHub's generated workflow token handles deployment.
+The hero illustration is implemented using CSS and SVG rather than separate image assets. Google Fonts are optional, with system-font fallbacks when external font requests are unavailable.
 
-Creating a build or pushing the workflow does not establish that the site is live; check the Actions deployment result.
+## Configuration
 
-Production builds include a `version.json` manifest. Open tabs check for a new deployment on startup, when returning to the tab, and every minute. A newer release triggers a refresh with a version query parameter, preserving the current section and other query parameters. Refresh waits while a commission dialog is open or a form is being edited. If an old deployment predates this feature, open the site once with a fresh `?v=` value or force-refresh to load the update.
+### Environment variables
 
-## Before launch
+| Variable | Default | Description |
+| --- | --- | --- |
+| `VITE_WEB3FORMS_ACCESS_KEY` | Public key configured in `src/lib/contact.ts` | Overrides the browser-side form access key. An explicitly empty value disables online submissions. |
+| `VITE_BASE_PATH` | `/` | Asset base path for the production build. Set to `/engineersonqueue/` for a GitHub Pages project site. |
 
-- Configure the free Web3Forms public form access key for `engineersonqueue@protonmail.com` as described below before relying on email inquiries.
-- Confirm the member's specific ISC2 certification and add a public verification link if desired. The current copy claims only the membership credential supplied by the team, with no invented certification level or endorsement.
-- Replace the honest portfolio placeholder with real projects when available; obtain permission before publishing client work.
-- Google Fonts are optional external requests; system sans-serif fallbacks keep the site usable if fonts cannot load.
+Variables prefixed with `VITE_` are exposed to client-side code at build time. **Do not store passwords, private API keys, or other secrets in these variables.** A Web3Forms public access key is designed for browser use but should not be confused with a private account credential.
 
-The hero artwork is CSS and SVG; no external image assets are required. Brand copy and service data live in `src/App.svelte`; responsive styles live in `src/style.css`.
+### Commission inquiries
 
-## Commission request email
+The commission form submits directly to Web3Forms. It collects the client's name, reply email, optional contact information, requested service, and project details. Requests are delivered to the mailbox associated with the configured access key.
 
-The form uses Web3Forms to send commission requests to the inbox associated with a public form access key. The team's receiving inbox is **engineersonqueue@protonmail.com**. A static GitHub Pages or Cloudflare Pages site can use this without an SMTP password or a backend server.
+The team's current inquiry address is `engineersonqueue@protonmail.com`.
 
-### One-time free setup
+To configure a different destination, register or update the receiving address through [Web3Forms](https://web3forms.com), verify mailbox ownership, and set the corresponding access key. Updating the visible contact email alone **does not** change where form submissions are delivered.
 
-1. Create a free form access key at `https://web3forms.com` using `engineersonqueue@protonmail.com` and follow the verification email.
-2. The confirmed public form key supplied by the team is configured in `src/lib/contact.ts`. To change it later, replace that public default or set `VITE_WEB3FORMS_ACCESS_KEY` in the build environment. An explicitly empty value disables online submissions; leaving the variable unset uses the confirmed default. This is a browser form access key, designed to be visible in the shipped JavaScript; it is not an account password or private administration API token.
-3. Rebuild and deploy, then submit one clearly labeled setup request from the live domain and verify that it arrives with the correct reply email. Sending email to a destination depends on the access key's inbox binding; changing only `commissionEmail` does not reroute submissions.
+The form reports success only after a confirmed provider response. Rejected submissions retain entered details so they can be corrected. Network timeouts are treated as **unconfirmed** rather than failed delivery because the request may have reached the provider.
 
-Customers submit their name, required reply email, optional phone or social contact, service, and project details without leaving the site. The interface shows success only after an explicit successful response from Web3Forms. A rejected request preserves the contact fields for correction. A lost or timed-out response is treated as unconfirmed delivery, since the email may already have been accepted; the site does not automatically resend or claim that delivery failed.
+After changing a key or deployment domain, submit a clearly labeled test request through the live site and confirm that it reaches the intended inbox. Web3Forms availability, delivery times, and free-tier limits are outside the site's control.
 
-Web3Forms must be configured before email submissions can work. The missing-key state offers a direct email link. The site uses Web3Forms only and does not redirect customers away to submit a request. Free-plan limits and provider delivery speed still apply; neither submission confirmation nor tests prove instant inbox delivery.
+## Deployment
 
-Local browser checks intercept the provider request and exercise success, rejection, missing setup, and uncertain delivery without sending real emails. Keep the provider's public browser form access key separate from account passwords and private management credentials.
+Production output is generated in `dist/`. The default asset base path is `/`, suitable for deployments at the root of a domain or subdomain.
 
-## Publish free on Cloudflare Pages
+### Cloudflare Pages
 
-Cloudflare Pages hosts this static site on the Free plan with a `pages.dev` address; buying a domain is optional. The project now builds for `/` by default, so no source edit is needed for Cloudflare. The GitHub Pages workflow explicitly sets `VITE_BASE_PATH=/engineersonqueue/` to keep the existing GitHub URL working.
+Connect the repository to Cloudflare Pages and use the following configuration:
 
-1. In the Cloudflare dashboard, open **Compute → Workers & Pages**. Click **Create application** (or **Create app**), then choose **Pages**. If the initial screen offers Workers, use the **Pages / Get started** link instead.
-2. Choose **Connect to Git / Import an existing Git repository**, connect GitHub, and select `a2soriano/engineersonqueue`. Grant access only to the repository needed for this project.
-3. Set the project name to `engineersonqueue` if available and the production branch to `main`.
-4. Use these build settings:
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | Vite |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+| Root directory | Repository root |
+| Node.js version | `24` (set `NODE_VERSION=24` if needed) |
+| `VITE_BASE_PATH` | Unset, or `/` |
 
-   | Setting | Value |
-   | --- | --- |
-   | Framework preset | Vite (or None) |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | Root directory | Leave empty (repository root) |
-   | Environment variable | `NODE_VERSION=24` |
+Once Git integration is enabled, pushes to the configured production branch trigger new deployments. Cloudflare provides a `pages.dev` address for the project; a custom domain is optional.
 
-   Leave `VITE_BASE_PATH` unset, or set it to `/`. No deploy command, Wrangler configuration, SMTP credentials, or paid plan is required for this Pages project.
-5. Click **Save and Deploy**. Wait for a successful deployment, then use the exact `https://<project-name>.pages.dev` address Cloudflare provides. The suggested name is not guaranteed to be available.
+This project is a **Pages** deployment. It does not require a Workers deploy command, Wrangler configuration, backend service, or server-side credentials.
 
-Later pushes to `main` deploy automatically on Cloudflare when the Git connection is enabled. Connecting a custom `.com` domain is optional and domain registration is a separate expense. After moving hosts, verify the commission form on the new domain and verify the Web3Forms key is configured before relying on delivery there.
+### GitHub Pages
 
-To build manually for a root-domain host, run `npm run build`. To reproduce the GitHub Pages subpath build locally, run `VITE_BASE_PATH=/engineersonqueue/ npm run build`.
+The repository includes `.github/workflows/deploy.yml`, which runs the project checks, builds the site, and deploys updates from `main`.
+
+In repository settings, open **Pages** and select **GitHub Actions** as the deployment source. The workflow sets the following base path for a GitHub Pages project URL:
+
+```bash
+VITE_BASE_PATH=/engineersonqueue/ npm run build
+```
+
+A custom domain served from the domain root should use `VITE_BASE_PATH=/` instead. Confirm deployment success in the repository's **Actions** tab before treating a release as live.
+
+## Release behavior
+
+Production builds include a `version.json` manifest used to detect newer releases. Open pages check the deployed version on startup, when the tab becomes active, and at one-minute intervals.
+
+When an update is available, the application refreshes with a version query parameter while preserving the current section and other query parameters. Refreshing is deferred if a commission dialog is open or the user is editing a form, reducing the risk of losing entered information.
+
+If a browser continues to serve an older deployment, perform a hard refresh and check the deployed `version.json` file and hosting cache settings.
+
+## Testing and maintenance
+
+Before deploying changes, run `npm run check` and `npm run build`, then inspect the built site using `npm run preview`.
+
+| Area | What to verify |
+| --- | --- |
+| Responsive layout | Navigation, spacing, typography, and content across mobile and desktop widths |
+| Navigation | Internal links, section scrolling, and mobile menu interactions |
+| Commission form | Valid submissions, required-field validation, provider rejection, and timeout handling |
+| Form configuration | Missing-key fallback and delivery to the expected mailbox |
+| Assets | Styles, icons, and fonts on both root-hosted and subpath-hosted builds |
+| Releases | Version detection without interrupting an active commission request |
+| Content | Accuracy of services, credentials, contact information, and published portfolio work |
+
+Browser-based form tests can intercept network requests to simulate success, failure, and uncertain delivery without sending real inquiries. A production smoke test is still necessary after changes to hosting or form configuration.
+
+### Content updates
+
+Update service descriptions and other website copy in `src/App.svelte`. Publish portfolio examples only when the project details and any required client permissions have been confirmed. Credential descriptions should refer to verifiable qualifications and should not imply certifications or endorsements that have not been established.
+
+## Contributing
+
+Keep changes focused and consistent with the existing Svelte and TypeScript patterns. Check responsive behavior when modifying layout or interactive components. Include a brief description of what changed and how it was verified when opening a pull request.
+
+For changes that affect deployment or form behavior, document any required configuration updates so other maintainers can reproduce the result.
