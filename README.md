@@ -54,15 +54,32 @@ npm run preview
 
 | Path | Responsibility |
 | --- | --- |
-| `src/App.svelte` | Main page content, service information, and site interactions |
-| `src/style.css` | Global styling and responsive layouts |
+| `src/App.svelte` | Page shell: section order, global shortcuts, dialog and terminal mounting |
+| `src/components/` | One component per section (`Hero`, `Services`, `Process`, `BriefBuilder`, `Workbench`, `Projects`, `About`, `Faq`, `ContactBand`, `Footer`) plus `Header`, `CommissionModal`, `Terminal`, and `Toasts` |
+| `src/components/tools/` | Workbench calculators: resistor color code, Ohm's law, LED resistor, subnet calculator, number bases |
+| `src/lib/content.ts` | Service definitions, typical requests, FAQs, process steps, and brief builder options |
+| `src/lib/eng.ts` | Dependency-free engineering helpers shared by the workbench and the terminal |
+| `src/lib/ui.svelte.ts` | Shared UI state (dialog, terminal, brief, active tool) and helpers such as toasts and clipboard copy |
+| `src/lib/commission.svelte.ts` | Commission form state, draft autosave, and Web3Forms submission |
+| `src/lib/actions.ts` | Focus trapping, tab keyboard navigation, and in-view detection |
 | `src/lib/contact.ts` | Contact settings and Web3Forms access-key configuration |
+| `src/style.css` | Design tokens, global styling, responsive layouts, and reduced-motion rules |
 | `.github/workflows/deploy.yml` | GitHub Pages build and deployment workflow |
 | `dist/` | Generated production files, created during builds |
 
-The main content and service definitions currently live in `src/App.svelte`. Visual changes should generally be made in `src/style.css`; contact delivery settings should be managed through `src/lib/contact.ts` or the deployment environment.
+Most copy changes happen in `src/lib/content.ts`; section-specific wording lives in the matching component. Visual changes should generally be made in `src/style.css`, starting with the tokens at the top of the file.
 
-The hero illustration is implemented using CSS and SVG rather than separate image assets. Google Fonts are optional, with system-font fallbacks when external font requests are unavailable.
+The hero illustration is implemented using CSS and SVG rather than separate image assets. Google Fonts (Space Grotesk, DM Sans, JetBrains Mono) are optional, with system-font fallbacks when external font requests are unavailable.
+
+### Interactive features
+
+| Feature | Where | Notes |
+| --- | --- | --- |
+| Brief builder | `BriefBuilder.svelte` | Four questions produce a printable queue ticket (`EOQ-XXXX`). Sending it pre-fills the commission form and adds the ticket reference to the email subject. Answers persist in `localStorage` under `eoq-brief`. |
+| Commission draft | `commission.svelte.ts` | Form fields autosave to `localStorage` under `eoq-commission-draft` and clear after a confirmed submission. Closing the dialog never interrupts a send in progress. |
+| Workbench | `Workbench.svelte` | Five calculators that run entirely in the browser. |
+| Terminal | `Terminal.svelte` | Opens with `Ctrl K`, `⌘K`, or the backtick key. Type `help` for commands, including `subnet`, `resistor`, `led`, and `conv`. |
+| Hero core | `Hero.svelte` | Tilts with the pointer and power-cycles when clicked. All motion respects `prefers-reduced-motion`. |
 
 ## Configuration
 
@@ -137,7 +154,9 @@ Before deploying changes, run `npm run check` and `npm run build`, then inspect 
 | --- | --- |
 | Responsive layout | Navigation, spacing, typography, and content across mobile and desktop widths |
 | Navigation | Internal links, section scrolling, and mobile menu interactions |
-| Commission form | Valid submissions, required-field validation, provider rejection, and timeout handling |
+| Commission form | Valid submissions, required-field validation, provider rejection, timeout handling, and draft restore after a reload |
+| Brief builder | Ticket printing, the hand-off into the commission form, and the ticket reference in the delivered email |
+| Workbench and terminal | Calculator results, tab keyboard navigation, and terminal commands such as `help` and `subnet 192.168.1.10/24` |
 | Form configuration | Missing-key fallback and delivery to the expected mailbox |
 | Assets | Styles, icons, and fonts on both root-hosted and subpath-hosted builds |
 | Releases | Version detection without interrupting an active commission request |
@@ -147,7 +166,7 @@ Browser-based form tests can intercept network requests to simulate success, fai
 
 ### Content updates
 
-Update service descriptions and other website copy in `src/App.svelte`. Publish portfolio examples only when the project details and any required client permissions have been confirmed. Credential descriptions should refer to verifiable qualifications and should not imply certifications or endorsements that have not been established.
+Update service descriptions, FAQs, and other shared copy in `src/lib/content.ts`. Publish portfolio examples only when the project details and any required client permissions have been confirmed. Credential descriptions should refer to verifiable qualifications and should not imply certifications or endorsements that have not been established.
 
 ## Contributing
 
