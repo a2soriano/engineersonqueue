@@ -228,7 +228,7 @@
     </div>
     <form class="terminal-input" onsubmit={submit}>
       <label for="terminal-command" class="prompt">guest@eoq:~$</label>
-      <input id="terminal-command" bind:this={input} bind:value={value} onkeydown={onKeydown} autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"/>
+      <input id="terminal-command" data-own-tab bind:this={input} bind:value={value} onkeydown={onKeydown} autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"/>
     </form>
   </div>
 </div>
