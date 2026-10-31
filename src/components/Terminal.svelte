@@ -200,10 +200,14 @@
       event.preventDefault();
       historyIndex = Math.min(history.length, historyIndex + 1);
       value = history[historyIndex] ?? '';
-    } else if (event.key === 'Tab' && value.trim() && !value.includes(' ')) {
-      const matches = commandNames.filter(c => c.startsWith(value.trim().toLowerCase()));
-      if (matches.length === 1) { event.preventDefault(); value = matches[0] + ' '; }
-      else if (matches.length > 1) { event.preventDefault(); print(matches.join('  '), 'dim'); }
+    } else if (event.key === 'Tab' && !event.shiftKey) {
+      // Tab always stays in the prompt, like a real terminal. Shift+Tab still moves focus out.
+      event.preventDefault();
+      const word = value.trim().toLowerCase();
+      if (!word || value.includes(' ')) return;
+      const matches = commandNames.filter(c => c.startsWith(word));
+      if (matches.length === 1) value = matches[0] + ' ';
+      else if (matches.length > 1) print(matches.join('  '), 'dim');
     } else if (event.key === 'l' && event.ctrlKey) {
       event.preventDefault();
       lines.length = 0;
