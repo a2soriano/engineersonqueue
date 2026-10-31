@@ -41,7 +41,7 @@
 
   let lines = $state<Line[]>([
     { kind: 'ok', text: 'eoq shell 2.0, connected to the queue.' },
-    { kind: 'dim', text: 'Type help to see what this terminal can do. Tab completes, arrow keys recall history.' }
+    { kind: 'dim', text: 'Type help to see what this terminal can do.' }
   ]);
   let value = $state('');
   let output = $state<HTMLDivElement>();
