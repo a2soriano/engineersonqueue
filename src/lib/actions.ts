@@ -7,7 +7,7 @@ export function trapFocus(node: HTMLElement, options: { initial?: string } = {})
   (initial ?? node).focus();
 
   function trap(event: KeyboardEvent) {
-    if (event.key !== 'Tab') return;
+    if (event.key !== 'Tab' || event.defaultPrevented) return;
     const items = Array.from(node.querySelectorAll<HTMLElement>(
       'button:not(:disabled), input:not(:disabled):not([type="hidden"]):not([tabindex="-1"]), select:not(:disabled), textarea:not(:disabled), a[href]'
     )).filter(item => item.getClientRects().length > 0);
